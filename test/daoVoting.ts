@@ -83,15 +83,16 @@ describe("DAO Voting", function () {
         "type": "function"
       }];
 
-      const description = "Changing settings in staking contract";
+      var description = "Changing settings in staking contract";
       // for testing situations with correct signature
       var iface = new ethers.utils.Interface(jsonAbi);
       var calldata = iface.encodeFunctionData('changeSettings', [100, 10, 10]);
 
-      // I created two proposals to test different situations
+      // I created two proposals to test different situations (here I work with external contract)
       await votingContract.addProposal(stakingContract.address, calldata, description);
       await votingContract.addProposal(stakingContract.address, calldata, description);
       
+      // expectations
       const info = await votingContract.votingInfo(0);
 
       expect(info[0]).to.equal(description);
@@ -101,6 +102,31 @@ describe("DAO Voting", function () {
       await expect(
         votingContract.connect(addr1).addProposal(stakingContract.address, calldata, description)
         ).to.be.revertedWith("Not a chair person");
+
+      // here I work with chainging settings inside voting contract
+      jsonAbi = [{
+        "inputs": [
+          {
+            "internalType": "uint256",
+            "name": "minimumQuorum_",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "debatingPeriodDuration_",
+            "type": "uint256"
+          }
+        ],
+        "name": "changeSettings",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      }];
+      description = "Changing settings of voting contract"
+      iface = new ethers.utils.Interface(jsonAbi);
+      calldata = iface.encodeFunctionData('changeSettings', [20, 1200]);
+      await votingContract.addProposal(votingContract.address, calldata, description);
+
     });
 
     it("Should allow you to vote in the voting", async function () {
@@ -115,6 +141,11 @@ describe("DAO Voting", function () {
       info = await votingContract.votingInfo(1);
       expect(info[1]).to.equal("0");
       expect(info[2]).to.equal("100");
+      // third voting (chainging settings in voting contract)
+      await votingContract.vote(2, 1);
+      info = await votingContract.votingInfo(2);
+      expect(info[1]).to.equal("100");
+      expect(info[2]).to.equal("0");
     });
 
     it("Should allow you to vote just once", async function () {
@@ -146,6 +177,18 @@ describe("DAO Voting", function () {
       expect(info[0]).to.equal(100);
       expect(info[1]).to.equal(10);
       expect(info[2]).to.equal(10);
+    });
+
+    it("Should change contract settings", async function () {
+      await votingContract.finishProposal(2);
+      
+      const info = await votingContract.settingsInfo();
+      expect(info[0]).to.equal(20);
+      expect(info[1]).to.equal(1200);
+    });
+
+    it("Should change settings only by DAO voting", async function () {
+      await expect(votingContract.changeSettings(20,1200)).to.be.revertedWith("Function can't be called by user");
     });
 
     it("Shouldn't allow you to withdraw tokens, if you have active votings", async function () {

@@ -59,6 +59,11 @@ contract DAOVoting {
         _;
     }
 
+    modifier requireDAOVoting {
+        require(msg.sender == address(this), "Function can't be called by user");
+        _;
+    }
+
     // function for adding voting tokens to the contract (before calling this function you should approve your tokens to contract)
     function deposit(uint256 amount_) external {
         _voteToken.transferFrom(msg.sender, address(this), amount_);
@@ -131,6 +136,12 @@ contract DAOVoting {
             }
         }
         return false;
+    }
+
+    // changes settings of voting contract (can be called only after voting)
+    function changeSettings(uint256 minimumQuorum_, uint256 debatingPeriodDuration_) external requireDAOVoting {
+        minimumQuorum = minimumQuorum_;
+        debatingPeriodDuration = debatingPeriodDuration_;
     }
 
     // returns information about specific voting
