@@ -58,7 +58,7 @@ describe("DAO Voting", function () {
       expect(await votingContract.balanceOf(addr1.address)).to.equal(50);
     });
 
-    it("Should allow chair person to add new proposal", async function () {
+    it("Should allow chairperson to add new proposal", async function () {
       var jsonAbi = [{
         "inputs": [
           {
@@ -101,7 +101,7 @@ describe("DAO Voting", function () {
       expect(info[3]).to.equal(false);
       await expect(
         votingContract.connect(addr1).addProposal(stakingContract.address, calldata, description)
-        ).to.be.revertedWith("Not a chair person");
+        ).to.be.revertedWith("Not a chairperson");
 
       // here I work with chainging settings inside voting contract
       jsonAbi = [{
@@ -164,6 +164,10 @@ describe("DAO Voting", function () {
 
     it("Shouldn't allow you to delegate your votes if you haven't got vote tokens", async function () {
       await expect(votingContract.connect(addr2).delegateVote(addr1.address, 2)).to.be.revertedWith("You haven't got vote tokens");
+    });
+
+    it("Shouldn't allow you to delegate your votes to yourself", async function () {
+      await expect(votingContract.connect(addr1).delegateVote(addr1.address, 2)).to.be.revertedWith("You can't delegate tokens to yourself");
     });
 
     it("Should allow you to vote just once", async function () {

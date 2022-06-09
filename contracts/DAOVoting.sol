@@ -52,7 +52,7 @@ contract DAOVoting {
     }
 
     modifier requireChairPerson {
-        require(msg.sender == _chairPerson, "Not a chair person");
+        require(msg.sender == _chairPerson, "Not a chairperson");
         _;
     }
 
@@ -70,6 +70,7 @@ contract DAOVoting {
     // delegate your vote to another user
     function delegateVote(address user_, uint256 proposalId_) external {
         require(!voted(user_, proposalId_), "This user have already voted");
+        require(msg.sender != user_, "You can't delegate tokens to yourself");
         require(!voted(msg.sender, proposalId_), "You have already voted");
         require(users[msg.sender].balance > 0, "You haven't got vote tokens");
 
@@ -77,7 +78,7 @@ contract DAOVoting {
         users[user_].delegatedVotes[proposalId_] += users[msg.sender].balance;
     }
 
-    // adds new proposal (can be called only by chair person)
+    // adds new proposal (can be called only by chairperson)
     function addProposal(address recipient_, bytes memory callData_, string memory description_) external requireChairPerson {
         proposals[proposalId] = Proposal(callData_, recipient_, description_, block.timestamp, 0,0, false);
         
