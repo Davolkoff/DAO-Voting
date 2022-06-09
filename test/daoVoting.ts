@@ -6,7 +6,7 @@ import { ethers, network } from "hardhat";
 describe("DAO Voting", function () {
   let voteToken: Contract; // vote token
   let votingContract: Contract; // DAO voting contract
-  let stakingContract: Contract; // staking contract
+  let stakingContract: Contract; // staking contract (for tests)
 
   let chairPerson: SignerWithAddress;
   let addr1: SignerWithAddress;
@@ -136,16 +136,34 @@ describe("DAO Voting", function () {
       var info = await votingContract.votingInfo(0);
       expect(info[1]).to.equal("100");
       expect(info[2]).to.equal("50");
-      //second voting (proposal rejected by users)
-      await votingContract.vote(1, 0);
-      info = await votingContract.votingInfo(1);
-      expect(info[1]).to.equal("0");
-      expect(info[2]).to.equal("100");
+      
       // third voting (chainging settings in voting contract)
       await votingContract.vote(2, 1);
       info = await votingContract.votingInfo(2);
       expect(info[1]).to.equal("100");
       expect(info[2]).to.equal("0");
+    });
+
+    it("Should allow you to delegate your vote", async function () {
+      await votingContract.delegateVote(addr1.address, 1);
+      
+      //second voting (proposal rejected by users)
+      await votingContract.connect(addr1).vote(1, 0);
+      const info = await votingContract.votingInfo(1);
+      expect(info[1]).to.equal("0");
+      expect(info[2]).to.equal("150");
+    });
+
+    it("Shouldn't allow you to delegate your votes if recipient already voted", async function () {
+      await expect(votingContract.connect(addr1).delegateVote(chairPerson.address, 2)).to.be.revertedWith("This user have already voted");
+    });
+
+    it("Shouldn't allow you to delegate your votes if you already voted", async function () {
+      await expect(votingContract.delegateVote(addr2.address, 1)).to.be.revertedWith("You have already voted");
+    });
+
+    it("Shouldn't allow you to delegate your votes if you haven't got vote tokens", async function () {
+      await expect(votingContract.connect(addr2).delegateVote(addr1.address, 2)).to.be.revertedWith("You haven't got vote tokens");
     });
 
     it("Should allow you to vote just once", async function () {
