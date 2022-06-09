@@ -38,7 +38,8 @@ contract DAOVoting {
 
     event ProposalAdded(
         uint256 proposalId, 
-        string description);
+        string description,
+        bytes callData);
     
     event ProposalFinished(
         uint256 proposalId,
@@ -68,7 +69,7 @@ contract DAOVoting {
     function addProposal(address recipient_, bytes memory callData_, string memory description_) external requireChairPerson {
         proposals[proposalId] = Proposal(callData_, recipient_, description_, block.timestamp, 0,0, false);
         
-        emit ProposalAdded(proposalId, description_);
+        emit ProposalAdded(proposalId, description_, callData_);
         proposalId++;
     }
 
@@ -138,5 +139,15 @@ contract DAOVoting {
                 proposals[proposalId_].positive,
                 proposals[proposalId_].negative,
                 proposals[proposalId_].ended);
+    }
+
+    // returns token balance of selected user
+    function balanceOf(address user_) external view returns (uint256) {
+        return users[user_].balance;        
+    }
+
+    // returns contract settings
+    function settingsInfo() external view returns (uint256, uint256) {
+        return (minimumQuorum, debatingPeriodDuration);
     }
 }

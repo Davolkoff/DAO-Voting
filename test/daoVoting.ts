@@ -32,6 +32,10 @@ describe("DAO Voting", function () {
       votingContract = await VC.deploy(chairPerson.address, voteToken.address, 90, 3600);
       await votingContract.deployed();
       await voteToken.connectVc(votingContract.address);
+
+      const info = await votingContract.settingsInfo();
+      expect(info[0]).to.equal(90);
+      expect(info[1]).to.equal(3600);
     });
 
     it("Should deploy staking contract (for tests)", async function () {
@@ -50,6 +54,8 @@ describe("DAO Voting", function () {
       await voteToken.connect(addr1).approve(votingContract.address, 50);
       await votingContract.connect(addr1).deposit(50);
       expect(await voteToken.balanceOf(votingContract.address)).to.equal(150);
+      expect(await votingContract.balanceOf(chairPerson.address)).to.equal(100);
+      expect(await votingContract.balanceOf(addr1.address)).to.equal(50);
     });
 
     it("Should allow chair person to add new proposal", async function () {
