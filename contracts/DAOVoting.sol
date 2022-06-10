@@ -25,6 +25,8 @@ contract DAOVoting {
         string description; // description of this proposal
         uint256 creationTime; // creation time of this proposal
 
+        mapping(address => bool) voted; // voted users
+
         uint256 positive; // number of votes for this proposal
         uint256 negative; // number of votes against this proposal
         bool ended; // is voting for this proposal ended or not
@@ -69,19 +71,25 @@ contract DAOVoting {
 
     // delegate your vote to another user
     function delegateVote(address user_, uint256 proposalId_) external {
-        require(!voted(user_, proposalId_), "This user have already voted");
+        require(!proposals[proposalId_].voted[user_], "This user have already voted");
         require(msg.sender != user_, "You can't delegate tokens to yourself");
-        require(!voted(msg.sender, proposalId_), "You have already voted");
+        require(!proposals[proposalId_].voted[msg.sender], "You have already voted");
         require(users[msg.sender].balance > 0, "You haven't got vote tokens");
 
         users[msg.sender].userProposals.push(proposalId_);
+
+        proposals[proposalId_].voted[msg.sender] = true;
         users[user_].delegatedVotes[proposalId_] += users[msg.sender].balance;
     }
 
     // adds new proposal (can be called only by chairperson)
     function addProposal(address recipient_, bytes memory callData_, string memory description_) external requireChairPerson {
-        proposals[proposalId] = Proposal(callData_, recipient_, description_, block.timestamp, 0,0, false);
-        
+        // Struct containing a mapping cannot be constructed, so I set values one by one
+        proposals[proposalId].callData = callData_;
+        proposals[proposalId].recipient = recipient_;
+        proposals[proposalId].description = description_;
+        proposals[proposalId].creationTime = block.timestamp;
+
         emit ProposalAdded(proposalId, description_, callData_);
         proposalId++;
     }
@@ -90,7 +98,7 @@ contract DAOVoting {
     function vote(uint256 proposalId_, bool choice_) external {
         require(block.timestamp - proposals[proposalId_].creationTime < debatingPeriodDuration, "Too late");
         require(users[msg.sender].balance > 0 || users[msg.sender].delegatedVotes[proposalId_] > 0, "You haven't got vote tokens");
-        require(!voted(msg.sender, proposalId_), "You have already voted");
+        require(!proposals[proposalId_].voted[msg.sender], "You have already voted");
         if(choice_){
             proposals[proposalId_].positive += users[msg.sender].balance += users[msg.sender].delegatedVotes[proposalId_];
         }
@@ -98,17 +106,8 @@ contract DAOVoting {
             proposals[proposalId_].negative += users[msg.sender].balance += users[msg.sender].delegatedVotes[proposalId_];
         }
 
+        proposals[proposalId_].voted[msg.sender] = true;
         users[msg.sender].userProposals.push(proposalId_);
-    }
-
-    // addition to the voting function
-    function voted(address user_, uint256 proposalId_) internal view returns (bool) {
-        for(uint i=0; i < users[user_].userProposals.length; ++i) {
-            if(users[user_].userProposals[i] == proposalId_){
-                return true;
-            }
-        }
-        return false;
     }
 
     // finishes voting 
